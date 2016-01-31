@@ -5,8 +5,12 @@ function Signal(expr) {
   self.myValue = undefined;
   self.observers = [];
 
-  self.update = function(exp) {
-    self.myExpr = exp;
+  self.send = function(exp) {
+    if (typeof(exp) === 'function') {
+      self.myExpr = exp;
+    } else {
+      self.myExpr = () => exp;
+    }
     self.computeValue(self.caller);
   }
 
@@ -31,13 +35,21 @@ function Signal(expr) {
     return self.myValue;
   }
 
-  self.update(expr);
+  self.map = function(func) {
+    return self.flatMap((x) => new Signal(func(x)));
+  }
+
+  self.flatMap = function(func) {
+    return new Signal((x) => func(self.apply(x)).apply(x));
+  }
+
+  self.send(expr);
 }
 
-var a = new Signal(() => 1);
-var b = new Signal(() => 2);
-var twicePlusTwo = new Signal((x) => a.apply(x) * 2 + b.apply(x));
-var fourth = new Signal((x) => twicePlusTwo.apply(x) * 2);
-console.log(fourth.myValue);
-a.update((x) => b.apply(x));
-console.log(fourth.myValue);
+var a = new Signal(1);
+var b = new Signal(2);
+
+var twice = a.map((x) => 2*x);
+console.log(twice.myValue);
+a.send(3);
+console.log(twice.myValue);
