@@ -43,13 +43,25 @@ function Signal(expr) {
     return new Signal((x) => func(self.apply(x)).apply(x));
   }
 
+  self.zip = function(b, func) {
+    return new Signal((x) => func(self.apply(x), b.apply(x)));
+  }
+
+  self.reduce = function(func, start) {
+    return new Signal((x) => {
+      start = func(self.apply(x), start);
+      return start;
+    });
+  }
+
   self.send(expr);
 }
 
 var a = new Signal(1);
 var b = new Signal(2);
 
-var twice = a.map((x) => 2*x);
-console.log(twice.myValue);
-a.send(3);
-console.log(twice.myValue);
+var twice = a.zip(b, (x, y) => x + y);
+var reduced = b.reduce((x,y) => x+y, 0);
+console.log(reduced.myValue);
+b.send(3);
+console.log(reduced.myValue);
