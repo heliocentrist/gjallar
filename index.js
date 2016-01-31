@@ -1,34 +1,9 @@
-function StackableVariable() {
-
-  var self = this;
-
-  self.values = [];
-
-  self.getValue = function() {
-    return self.values.length === 0 ? undefined : self.values[0];
-  }
-
-  self.withValue = function(newValue) {
-    return function(operation) {
-      self.values.unshift(newValue);
-      try {
-        return operation();
-      } finally {
-        self.values.shift();
-      }
-    }
-  }
-}
-
-var caller = new StackableVariable();
-
 function Signal(expr) {
   var self = this;
 
   self.myExpr = undefined;
   self.myValue = undefined;
   self.observers = [];
-  self.caller = caller;
 
   self.update = function(exp) {
     self.myExpr = exp;
@@ -36,8 +11,7 @@ function Signal(expr) {
   }
 
   self.computeValue = function() {
-
-    var newValue = self.caller.withValue(self)(self.myExpr);
+    var newValue = self.myExpr(self);
     if (self.myValue != newValue) {
       self.myValue = newValue;
       var obs = self.observers;
@@ -46,13 +20,14 @@ function Signal(expr) {
     }
   }
 
-  self.apply = function() {
-    var i = self.caller.getValue();
+  self.apply = function(c) {
 
-    self.observers.push(i);
-    if (caller.getValue().observers.indexOf(this) > -1) {
+    self.observers.push(c);
+
+    if (c.observers.indexOf(self) > -1) {
       throw new Error('Self-referencing signal');
     };
+
     return self.myValue;
   }
 
@@ -61,8 +36,8 @@ function Signal(expr) {
 
 var a = new Signal(() => 1);
 var b = new Signal(() => 2);
-var twicePlusTwo = new Signal(() => a.apply() * 2 + b.apply());
-var fourth = new Signal(() => twicePlusTwo.apply() * 2);
+var twicePlusTwo = new Signal((x) => a.apply(x) * 2 + b.apply(x));
+var fourth = new Signal((x) => twicePlusTwo.apply(x) * 2);
 console.log(fourth.myValue);
-a.update(() => b.apply());
+a.update((x) => b.apply(x));
 console.log(fourth.myValue);
